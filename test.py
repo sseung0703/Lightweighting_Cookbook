@@ -20,8 +20,6 @@ warnings.filterwarnings("ignore")
 
 parser = argparse.ArgumentParser(description='')
 
-parser.add_argument("--train_path", default="../test", type=str,
-                help = 'training path to save results filing including source code, checkpoint, and tensorboard log')
 parser.add_argument("--arch", default='ResNet56', type=str,
                 help = 'network architecture, currently only ResNet family is available')
 parser.add_argument("--trained_param", type=str,
@@ -52,7 +50,7 @@ if __name__ == '__main__':
     model_cls = getattr(ResNet, args.arch)
     model = model_cls(num_classes = datasets.num_classes)
     
-    state = op_utils.restore_checkpoint(args.train_path, model)
+    state = op_utils.restore_checkpoint(args.trained_param, model)
 
     eval_state = op_utils.EvalState.create(apply_fn = model.apply, params = state['params'], batch_stats = state['batch_stats'])
     eval_stae = replicate(eval_state)
