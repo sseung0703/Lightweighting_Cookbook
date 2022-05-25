@@ -26,7 +26,7 @@ It will be a quite long term project, so please get patient and keep watching th
 
 - Note that Accuracy on CIFAR dataset has a quite large variance <br>
   so that you should focus on another metrics, i.e., training time.
-- As you can notice, JAX and TF are much faster than Pytorch because of JIT compiling. This performance gap 
+- As you can notice, JAX and TF are much faster than Pytorch because of JIT compiling.
 
 <p align="center">
 
