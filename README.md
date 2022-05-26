@@ -15,7 +15,7 @@ It will be a quite long term project, so please get patient and keep watching th
 ```
   # ResNet-56 on CIFAR10
   python train.py --gpu_id 0 --arch ResNet-56 --dataset CIFAR10 --train_path ../test
-  python test.py --gpu_id 0 --arch ResNet-56 --dataset CIFAR10 --trained_param ../test/checkpoint_200
+  python test.py --gpu_id 0 --arch ResNet-56 --dataset CIFAR10 --trained_param pretrained/res56_c10
 ```
 
 ## Experimental comparison with other common deep learning libraries, i.e., Tensorflow2 and Pytorch
@@ -46,7 +46,7 @@ It will be a quite long term project, so please get patient and keep watching th
   - [x] Dataprovider in JAX
   - [x] Naive training framework
   - [x] Monitoring by Tensorboard
-  - [ ] Profiling addons
+  - [x] Profiling addons
   - [ ] Enlarge model zoo
 
   

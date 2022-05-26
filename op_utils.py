@@ -20,8 +20,8 @@ def initialized(key, input_size, model):
         initialize given model's parameters using PRNG.
 
         Args:
-            args: Arguments given in main code.
             rng: a PRNG key used as the random key.
+            input_size: input data size
             test_only: If this is set to True, only test data provider will be generated.
 
         Return:
@@ -176,7 +176,7 @@ def create_eval_step(num_classes):
     @jax.jit
     def eval_step(state, batch):
         variables = {'params': state.params, 'batch_stats': state.batch_stats}
-        logits = state.apply_fn(variables, batch['image'], train=False, mutable=False)
+        logits = state.apply_fn(variables, batch['image'], train=False)
 
         # objective function
         one_hot_labels = common_utils.onehot(batch['label'], num_classes=num_classes)

@@ -56,6 +56,8 @@ if __name__ == '__main__':
     eval_stae = replicate(eval_state)
     eval_step = op_utils.create_eval_step(datasets.num_classes)
 
+    utils.profile_model(datasets.input_size, eval_state, model)
+
     logger = utils.summary()
     for batch in datasets.provider['test']():
         metrics = eval_step(eval_state, batch)
@@ -65,3 +67,4 @@ if __name__ == '__main__':
 
     eval_result = logger.result(metrics.keys())
     print ('Test loss = {0:0.4f}, Test acc = {1:0.2f}'.format(eval_result['test/loss'], eval_result['test/accuracy']))
+

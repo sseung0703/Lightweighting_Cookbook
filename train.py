@@ -84,11 +84,12 @@ if __name__ == '__main__':
 
     eval_step = op_utils.create_eval_step(datasets.num_classes)
 
-    tic = time.time()
-    logger = utils.summary()
+    utils.profile_model(datasets.input_size, state, model)
 
+    logger = utils.summary()
     summary_writer = tensorboard.SummaryWriter(args.train_path)
 
+    tic = time.time()
     for epoch in range(start_epoch, args.train_epoch):
         # Train loop
         for batch in datasets.provider['train']():

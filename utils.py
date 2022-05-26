@@ -8,6 +8,7 @@ import numpy as np
 
 import jax
 import jax.numpy as jnp
+from jax import tree_util
 
 from flax import jax_utils
 from flax.training import checkpoints
@@ -52,6 +53,42 @@ def shard(x, devices):
     B, *D = x.shape
     num_devices = len(devices)
     return jnp.reshape(x, [num_devices, B//num_devices, *D])
+
+def profile_model(input_size, state, model):
+    """
+        Profile a flax model. FLOPS and number of parameters are calcluated acording to layer addon.
+
+        Args:
+            input_size: input data size
+            state: Simple train state for the common case with a single Optax optimizer.
+            model: FLAX model
+
+        Return:
+            flops: FLOPS of model
+            n_params: number of parameters in model
+
+    """
+
+    cpu = jax.local_devices(backend = 'cpu')[0]
+
+    input_size = (1, *input_size)
+    variables = {'params': tree_util.tree_map(lambda x: jax.device_put(x, cpu), state.params), 'batch_stats': tree_util.tree_map(lambda x: jax.device_put(x, cpu), state.batch_stats)}
+    variables = jax_utils.unreplicate(variables)
+
+    _, state = state.apply_fn(variables, jnp.ones(input_size, model.dtype), train=False, mutable=['flops', 'n_params'])
+
+    flops = sum(tree_util.tree_leaves(state['flops']))
+    n_params = sum(tree_util.tree_leaves(state['n_params']))
+    
+    Prefix = ['','K','M','G']
+    pf = (len(str(flops)) - 1)//3
+    pp = (len(str(n_params)) - 1)//3
+
+    print('='*20)
+    print('Model FLOPS   : %.2f %s'%(flops/ 10**(pf*3), Prefix[pf] ))
+    print('Model #Params : %.2f %s'%(n_params/ 10**(pp*3), Prefix[pp] ))
+    print('='*20, '\n')
+    return flops, n_params
 
 class summary:
     """
