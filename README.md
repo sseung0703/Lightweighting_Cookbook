@@ -1,6 +1,10 @@
 # Training and Lightweighting Cookbook in JAX/FLAX 
+<p align="center">
+  <img src="https://user-images.githubusercontent.com/26036843/170741627-d8d59c65-bc94-471a-8ad0-686ccd1ba9bd.jpg" width="1000">
+</p>
+
 ## Introduction
-- This project attempts to build neural network training and lightweighting cookbook including three kinds of lightweighting solutions, i.e., knowledge distillation, filter pruning, and quantization. <br>
+- This project attempts to build neural network training and lightweighting cookbook including three kinds of lightweighting solutions, i.e., knowledge distillation, filter pruning, and quantization.
 - It will be a quite long term project, so please get patient and keep watching this repository 🤗.
 
 ## Requirements
@@ -51,8 +55,7 @@
   - [x] Naive training framework
   - [x] Monitoring by Tensorboard
   - [x] Profiling addons
-  - [ ] Enlarge model zoo
-
+  - [ ] Enlarge model zoo including HuggingFace pre-trained models
   
 - [ ] Knowledge distillation framework
   - [x] Basic framework
