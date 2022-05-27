@@ -1,6 +1,6 @@
 # Training and Lightweighting Cookbook in JAX/FLAX 
 <p align="center">
-  <img src="https://user-images.githubusercontent.com/26036843/170741627-d8d59c65-bc94-471a-8ad0-686ccd1ba9bd.jpg" width="1000">
+  <img src="https://user-images.githubusercontent.com/26036843/170744735-e52a6743-9c62-4c24-932c-0ee1a5551bca.jpg" width="1000">
 </p>
 
 ## Introduction
