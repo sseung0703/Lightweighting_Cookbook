@@ -63,11 +63,11 @@ class build_dataset_providers:
                                                   rng = self.rng['test'],
                                                   drop_remainder = False)
  
-        print('='*20)
+        print('='*50)
         print(args.dataset, 'data providers are built as follows:')
-        print('Data cardinality:',self.cardinality)
-        print('Number of iterations:',self.iter_len)
-        print('='*20, '\n')
+        print('- Data cardinality     :',self.cardinality)
+        print('- Number of iterations :',self.iter_len)
+        print('='*50, '\n')
 
     def gen_provider(self, 
                      split,

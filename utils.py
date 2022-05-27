@@ -22,9 +22,9 @@ def save_code_and_augments(args):
 
     """
     if os.path.isdir(args.train_path): 
-        print ('============================================')
+        print ('='*50)
         print ('The folder already is. It will be overwrited')
-        print ('============================================')
+        print ('='*50, '\n')
     else:
         os.mkdir(args.train_path)
 
@@ -54,11 +54,12 @@ def shard(x, devices):
     num_devices = len(devices)
     return jnp.reshape(x, [num_devices, B//num_devices, *D])
 
-def profile_model(input_size, state, model):
+def profile_model(arch, input_size, state, model):
     """
         Profile a flax model. FLOPS and number of parameters are calcluated acording to layer addon.
 
         Args:
+            arch: name of model
             input_size: input data size
             state: Simple train state for the common case with a single Optax optimizer.
             model: FLAX model
@@ -84,10 +85,11 @@ def profile_model(input_size, state, model):
     pf = (len(str(flops)) - 1)//3
     pp = (len(str(n_params)) - 1)//3
 
-    print('='*20)
-    print('Model FLOPS   : %.2f %s'%(flops/ 10**(pf*3), Prefix[pf] ))
-    print('Model #Params : %.2f %s'%(n_params/ 10**(pp*3), Prefix[pp] ))
-    print('='*20, '\n')
+    print('='*50)
+    print('Model profile of ' + arch)
+    print('- Model FLOPS   : {0:s} {1:s}'.format( str(round(flops/ 10**(pf*3), 2)).rjust(6), Prefix[pf] ))
+    print('- Model #Params : {0:s} {1:s}'.format( str(round(n_params/ 10**(pp*3), 2)).rjust(6), Prefix[pp] ))
+    print('='*50, '\n')
     return flops, n_params
 
 class summary:

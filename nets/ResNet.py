@@ -16,6 +16,7 @@
 
 from functools import partial
 from typing import Any, Callable, Sequence, Tuple
+from os.path import split
 
 from flax import linen as nn
 import jax.numpy as jnp
@@ -32,22 +33,21 @@ class ResNetBlock(nn.Module):
     norm: ModuleDef
     act: Callable
     strides: Tuple[int, int] = (1, 1)
+    name = ''
 
     @nn.compact
     def __call__(self, x):
         residual = x
-        y = self.conv(self.filters, (3, 3), self.strides,
-                    inputs = x)
-        y = self.norm(inputs = y)
+        y = self.conv(self.filters, (3, 3), self.strides, name = self.name + '/conv0', inputs = x)
+        y = self.norm(name = self.name + '/bn0', inputs = y)
         y = self.act(y)
 
-        y = self.conv(self.filters, (3, 3), inputs = y)
-        y = self.norm(scale_init=nn.initializers.zeros, inputs = y)
+        y = self.conv(self.filters, (3, 3), name = self.name + '/conv1', inputs = y)
+        y = self.norm(scale_init=nn.initializers.zeros, name = self.name + '/norm1', inputs = y)
 
         if residual.shape != y.shape:
-            residual = self.conv(self.filters, (1, 1),
-                                 self.strides, name='conv_proj', inputs = residual)
-            residual = self.norm(name='norm_proj', inputs = residual)
+            residual = self.conv(self.filters, (1, 1), self.strides, name = self.name + '/conv_proj', inputs = residual)
+            residual = self.norm(name= self.name + '/norm_proj', inputs = residual)
 
         return self.act(residual + y)
 
@@ -84,35 +84,34 @@ class ResNet(nn.Module):
     stage_sizes: Sequence[int]
     block_cls: ModuleDef
     num_classes: int
+    keep_feats: Sequence[str]
     num_filters: int = 64
     dtype: Any = jnp.float32
     act: Callable = nn.relu
     conv: ModuleDef = LayerAddon(nn.Conv)
     norm: ModuleDef = LayerAddon(nn.BatchNorm)
 
-    with_profile: bool = False
-
     @nn.compact
     def __call__(self, x, train: bool = True):
-        conv = partial(self.conv.profiled_call, use_bias=False, dtype=self.dtype)
-        norm = partial(self.norm.profiled_call,
+        keep_feats = [split(kp) for kp in self.keep_feats]
+
+        conv = partial(self.conv.addon_call, use_bias=False, dtype=self.dtype, keep_feats = keep_feats)
+        norm = partial(self.norm.addon_call,
                        use_running_average=not train,
                        momentum=0.9,
                        epsilon=1e-5,
-                       dtype=self.dtype)
-        Dense = LayerAddon(nn.Dense).profiled_call
+                       dtype=self.dtype,
+                       keep_feats = keep_feats)
+        dense = partial(LayerAddon(nn.Dense).addon_call, keep_feats = keep_feats)
         
         if len(self.stage_sizes) == 3:
-            x = conv(self.num_filters, (3, 3), name='conv_init',
-                    inputs = x)
-            x = norm(name='bn_init',
-                    inputs = x)
+            x = conv(self.num_filters, (3, 3), name='conv_init', inputs = x)
+            x = norm(name='bn_init', inputs = x)
             x = nn.relu(x)
 
         else:    
-            x = conv(self.num_filters, (7, 7), (2, 2),
-                    name='conv_init')(x)
-            x = norm(name='bn_init')(x)
+            x = conv(self.num_filters, (7, 7), (2, 2), name='conv_init', inputs = x)
+            x = norm(name='bn_init', inputs = x)
             x = nn.relu(x)
             x = nn.max_pool(x, (3, 3), strides=(2, 2), padding='SAME')
         
@@ -123,10 +122,11 @@ class ResNet(nn.Module):
                                    strides=strides,
                                    conv=conv,
                                    norm=norm,
-                                   act=self.act)(x)
+                                   act=self.act,
+                                   name = 'block_%d_%d'%(i,j),
+                                   )(x)
         x = jnp.mean(x, axis=(1, 2))
-        x = Dense(self.num_classes, dtype=self.dtype,
-                inputs = x)
+        x = dense(self.num_classes, dtype=self.dtype, name = 'classifier', inputs = x)
 
         return x
 
@@ -151,15 +151,21 @@ ResNet18Local = partial(ResNet, stage_sizes=[2, 2, 2, 2],
 ## CIFAR confs
 ResNet56 = partial(ResNet, stage_sizes=[9, 9, 9],
                    block_cls=ResNetBlock,
-                   num_filters = 16)
+                   num_filters = 16,
+                   keep_feats = [],
+                   )
 
 ResNet32 = partial(ResNet, stage_sizes=[5, 5, 5],
                    block_cls=ResNetBlock,
-                   num_filters = 16)
+                   num_filters = 16,
+                   keep_feats = [],
+                   )
 
 ResNet20 = partial(ResNet, stage_sizes=[3, 3, 3],
                    block_cls=ResNetBlock,
-                   num_filters = 16)
+                   num_filters = 16,
+                   keep_feats = [],
+                   )
 
 
 # Used for testing only.

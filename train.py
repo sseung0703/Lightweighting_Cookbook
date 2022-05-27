@@ -22,7 +22,7 @@ warnings.filterwarnings("ignore")
 
 parser = argparse.ArgumentParser(description='')
 
-parser.add_argument("--train_path", default="../test", type=str,
+parser.add_argument("--train_path", default="~/test", type=str,
         help = 'training path to save results filing including source code, checkpoint, and tensorboard log')
 parser.add_argument("--arch", default='ResNet56', type=str,
         help = 'network architecture, currently only ResNet family is available')
@@ -59,7 +59,7 @@ os.environ['XLA_PYTHON_CLIENT_PREALLOCATE'] = '0'
 if args.deterministic:
     os.environ['TF_DETERMINISTIC_OPS'] = '1'
 
-print(f"detected device: {jax.local_devices()}")
+print(f"\n Detected device: {jax.local_devices()} \n")
 
 if __name__ == '__main__':
     rng = jax.random.PRNGKey(args.seed)
@@ -68,23 +68,23 @@ if __name__ == '__main__':
     rng, key = jax.random.split(rng)
     datasets = CIFAR.build_dataset_providers(args, key)
 
-    model_cls = getattr(ResNet, args.arch)
-    model = model_cls(num_classes = datasets.num_classes)
+    if 'ResNet' in args.arch:
+        model_cls = getattr(ResNet, args.arch)
+        model = model_cls(num_classes = datasets.num_classes)
     
     learning_rate_fn = optax.piecewise_constant_schedule(args.learning_rate, { int(dp * args.train_epoch * datasets.iter_len['train']) : args.decay_rate for dp in args.decay_points})
-    
     rng, key = jax.random.split(rng)
-    train_step, sync_batch_stats, state = op_utils.create_train_state_n_step(args, key, model, datasets.input_size, datasets.num_classes, learning_rate_fn)
+    state = op_utils.create_train_state(key, model, datasets.input_size, learning_rate_fn)
+    utils.profile_model(args.arch, datasets.input_size, state, model)
+
+    train_step, sync_batch_stats = op_utils.create_train_step(args.weight_decay)
+    eval_step = op_utils.create_eval_step(datasets.num_classes)
 
     if args.trained_param is not None:
         state = op_utils.restore_checkpoint(args.trained_param, state)
         start_epoch = state.step.item() // datasets.iter_len['train']
     else:
         start_epoch = 0
-
-    eval_step = op_utils.create_eval_step(datasets.num_classes)
-
-    utils.profile_model(datasets.input_size, state, model)
 
     logger = utils.summary()
     summary_writer = tensorboard.SummaryWriter(args.train_path)
@@ -114,7 +114,6 @@ if __name__ == '__main__':
             summary_writer.scalar(k, v, epoch)
  
         test_tic = time.time()
-        os.environ['XLA_PYTHON_CLIENT_PREALLOCATE'] = '0'
         # Test loop    
         for batch in datasets.provider['test']():
             metrics = eval_step(state, batch)

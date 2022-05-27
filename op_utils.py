@@ -85,29 +85,24 @@ def l2_weight_decay(params, grads, weight_decay):
     new_grads = jax.tree_unflatten(treedef, grads_flat)
     return new_grads
 
-def create_train_state_n_step(args, rng, model, input_size, num_classes, learning_rate_fn):
+def create_train_state(rng, model, input_size, learning_rate_fn):
     """
-        Initialize components for training and create training step.
+        Initialize components for training.
         This function is based on the below flax example.
         https://github.com/google/flax/blob/main/examples/imagenet/train.py
 
         Args:
-            args: General arguments.
-            rng: a PRNG key used as the random key.
             model: FLAX model 
-            num_classes: number of classes
+            input_size: input image size
             learning_rate_fn: leanrning rate scheduler built by optax.
 
         return:
-            train_step: training step for given model and trainable variables. whole computations are jit compiled and 
-            sync_batch_stats: synchronize each batch stats on multiple devices.
             state: Simple train state for the common case with a single Optax optimizer.
                 details can be found at https://github.com/google/flax/blob/main/flax/training/train_state.py
 
     """
 
     params, batch_stats = initialized(rng, input_size, model)
-    variables = {'params': params, 'batch_stats': batch_stats}
 
     tx = optax.sgd(
         learning_rate = learning_rate_fn,
@@ -121,28 +116,44 @@ def create_train_state_n_step(args, rng, model, input_size, num_classes, learnin
         batch_stats=batch_stats,
     )
     state = jax_utils.replicate(state)
+    return state
+
+def create_train_step(weight_decay):
+    """
+        Create main training step.
+        This function is based on the below flax example.
+        https://github.com/google/flax/blob/main/examples/imagenet/train.py
+
+        Args:
+            weight_decay: l2 regularization strength.
+
+        return:
+            train_step: training step for given model and trainable variables. whole computations are jit compiled and pmapped.
+            sync_batch_stats: synchronize each batch stats on multiple devices.
+
+    """
 
     @jax.jit
     def train_step(state, batch):
         def forward(params):
             variables = {'params': params, 'batch_stats': state.batch_stats}
-            logits, new_model_state = state.apply_fn(variables, batch['image'], mutable=['batch_stats'])
+            logits, new_state = state.apply_fn(variables, batch['image'], mutable=['batch_stats'])
 
             # objective function
-            one_hot_labels = common_utils.onehot(batch['label'], num_classes=num_classes)
+            one_hot_labels = common_utils.onehot(batch['label'], num_classes=logits.shape[-1])
             loss = jnp.mean( optax.softmax_cross_entropy(logits=logits, labels=one_hot_labels) )
-            return loss, (new_model_state, logits, loss)
+            return loss, (new_state, logits, loss)
 
         grad_fn = jax.value_and_grad(forward, has_aux=True)
         aux, grads = grad_fn(state.params)
-        new_model_state, logits, loss = aux[1]
+        new_state, logits, loss = aux[1]
         
         grads = jax.lax.pmean(grads, axis_name='batch')
-        grads = l2_weight_decay(state.params, grads, args.weight_decay)
+        grads = l2_weight_decay(state.params, grads, weight_decay)
 
         accuracy = jnp.mean(jnp.argmax(logits, -1) == batch['label'])
         new_state = state.apply_gradients(
-            grads=grads, batch_stats=new_model_state['batch_stats'])
+            grads=grads, batch_stats=new_state['batch_stats'])
 
         metrics = {
             'loss': loss,
@@ -155,10 +166,11 @@ def create_train_state_n_step(args, rng, model, input_size, num_classes, learnin
     train_step = jax.pmap(train_step, axis_name = "batch")
 
     cross_replica_mean = jax.pmap(lambda x: jax.lax.pmean(x, 'x'), 'x')
+
     def sync_batch_stats(state):
         return state.replace(batch_stats=cross_replica_mean(state.batch_stats))
 
-    return train_step, sync_batch_stats, state
+    return train_step, sync_batch_stats
 
 def create_eval_step(num_classes):
     """

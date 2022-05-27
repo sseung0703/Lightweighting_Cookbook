@@ -6,7 +6,6 @@ import jax.numpy as jnp
 import flax
 import flax.linen as nn
 
-
 class LayerAddon:
     '''
         Layer addon for various purposes such as
@@ -26,47 +25,71 @@ class LayerAddon:
     def __init__(self, layer):
         self.layer = layer
 
-        def profiled_call(*args, **kargs):
+        def addon_call(*args, **kargs):
             x = kargs.pop('inputs')
+            keep_feats = kargs.pop('keep_feats')
+            
             layer_ = self.layer(*args, **kargs)
             y = layer_(x)
 
-            if layer == nn.Conv:
-                Di = x.shape[-1]
-                _, H, W, Do = y.shape
+            for target_layer, feat_type in keep_feats:
+                if target_layer == layer_.name:
+                    if feat_type == 'in':
+                        layer_.sow('kept_feats', 'kept_feats', [target_layer, x])
 
-                kernel_size = layer_.kernel_size[0] * layer_.kernel_size[1] * Di * Do
-                tensor_size = H*W
+                    elif feat_type == 'out':
+                        layer_.sow('kept_feats', 'kept_feats', [target_layer, y])
 
-                layer_.sow('flops', 'flops', tensor_size*kernel_size)
-                layer_.sow('n_params', 'n_params', kernel_size)
-
-                if layer_.use_bias:
-                    layer_.sow('n_params', 'n_params', Do)
-            if layer == nn.Dense:
-                Di = x.shape[-1]
-                Do = y.shape[-1]
-                kernel_size = Di * Do
-
-                tensor_size = 1
-                for n in y.shape[1:-1]:
-                    tensor_size *= n
-
-                layer_.sow('flops', 'flops', tensor_size * kernel_size)
-                layer_.sow('n_params', 'n_params', kernel_size)
-
-                if layer_.use_bias:
-                    layer_.sow('n_params', 'n_params', Do)
-
-            if layer == nn.BatchNorm:
-                Do = y.shape[-1]
-
-                tensor_size = 1
-                for n in y.shape[1:-1]:
-                    tensor_size *= n
-
-                layer_.sow('flops', 'flops', tensor_size * Do * (1 + layer_.use_scale) )
-                layer_.sow('n_params', 'n_params', Do * (2 + layer_.use_bias + layer_.use_scale) )
+            flops, n_params = self.profiling(layer_, x, y)
+            layer_.sow('flops', 'flops', flops)
+            layer_.sow('n_params', 'n_params', n_params)
             return y
 
-        self.profiled_call = profiled_call
+        self.addon_call = addon_call
+
+    def profiling(self, layer_, x, y):
+        ## Profiling for each layer type
+        if self.layer == nn.Conv:
+            Di = x.shape[-1]
+            _, H, W, Do = y.shape
+
+            kernel_size = layer_.kernel_size[0] * layer_.kernel_size[1] * Di * Do
+            tensor_size = H*W
+
+            flops = tensor_size * kernel_size
+            n_params = kernel_size
+
+            if layer_.use_bias:
+                n_params += Do
+
+        elif self.layer == nn.Dense:
+            Di = x.shape[-1]
+            Do = y.shape[-1]
+            kernel_size = Di * Do
+
+            tensor_size = 1
+            for n in y.shape[1:-1]:
+                tensor_size *= n
+
+            flops = tensor_size * kernel_size
+            n_params = kernel_size
+
+            if layer_.use_bias:
+                n_params += Do
+
+        elif self.layer == nn.BatchNorm:
+            Do = y.shape[-1]
+
+            tensor_size = 1
+            for n in y.shape[1:-1]:
+                tensor_size *= n
+
+            flops = tensor_size * Do * (1 + layer_.use_scale)
+            n_params = Do * (2 + layer_.use_bias + layer_.use_scale)
+
+        else:
+            raise NotImplementedError(
+                'Profile function of %s is not implemented\
+                 If you want to use profile this, please implement yourself or report on Issue'%(self.layer)
+            )
+        return flops, n_params

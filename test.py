@@ -40,7 +40,7 @@ args = parser.parse_args()
 args.home_path = os.path.dirname(os.path.abspath(__file__))
 os.environ["CUDA_VISIBLE_DEVICES"]=",".join(args.gpu_id)
 
-print(f"detected device: {jax.local_devices()}")
+print(f"\n Detected device: {jax.local_devices()}\n")
 
 if __name__ == '__main__':
     rng = jax.random.PRNGKey(args.seed)
@@ -51,12 +51,11 @@ if __name__ == '__main__':
     model = model_cls(num_classes = datasets.num_classes)
     
     state = op_utils.restore_checkpoint(args.trained_param, model)
-
     eval_state = op_utils.EvalState.create(apply_fn = model.apply, params = state['params'], batch_stats = state['batch_stats'])
     eval_stae = replicate(eval_state)
     eval_step = op_utils.create_eval_step(datasets.num_classes)
 
-    utils.profile_model(datasets.input_size, eval_state, model)
+    utils.profile_model(args.arch, datasets.input_size, eval_state, model)
 
     logger = utils.summary()
     for batch in datasets.provider['test']():

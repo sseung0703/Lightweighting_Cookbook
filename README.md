@@ -1,6 +1,7 @@
 # Training and Lightweighting Cookbook in JAX/FLAX 
-This project attempts to build neural network training and lightweighting cookbook including three kinds of lightweighting solutions, i.e., knowledge distillation, filter pruning, and quantization. <br>
-It will be a quite long term project, so please get patient and keep watching this repository 🤗.
+## Introduction
+- This project attempts to build neural network training and lightweighting cookbook including three kinds of lightweighting solutions, i.e., knowledge distillation, filter pruning, and quantization. <br>
+- It will be a quite long term project, so please get patient and keep watching this repository 🤗.
 
 ## Requirements
 - jax
@@ -14,7 +15,7 @@ It will be a quite long term project, so please get patient and keep watching th
 
 ```
   # ResNet-56 on CIFAR10
-  python train.py --gpu_id 0 --arch ResNet-56 --dataset CIFAR10 --train_path ../test
+  python train.py --gpu_id 0 --arch ResNet-56 --dataset CIFAR10 --train_path ~/test
   python test.py --gpu_id 0 --arch ResNet-56 --dataset CIFAR10 --trained_param pretrained/res56_c10
 ```
 
@@ -35,7 +36,7 @@ It will be a quite long term project, so please get patient and keep watching th
 | JAX     |   93.98 |      54 |
 | TF      |   93.91 |      53 |
 | Pytorch |   93.80 |      69 |
-
+</p>
 
 <p align="center">
   <img src="https://user-images.githubusercontent.com/26036843/170279989-96cd1d0d-5906-49c0-9deb-77d9eb4eefe3.png" width="400"><img src="https://user-images.githubusercontent.com/26036843/170280803-7b16bb18-df05-47bf-86d8-7fb502ef22f8.png" width="400"><br>
@@ -51,8 +52,8 @@ It will be a quite long term project, so please get patient and keep watching th
 
   
 - [ ] Knowledge distillation framework
-  - [ ] Basic framework
-  - [ ] Off-line distillation
+  - [x] Basic framework
+  - [x] Off-line distillation
   - [ ] On-line distillation
   - [ ] Self distillation
   - [ ] Enlarge the distillation algorithm zoo
