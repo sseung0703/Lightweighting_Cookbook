@@ -25,9 +25,8 @@
 - Although some of the algorithms used soft-logits parallelly in the paper, I used only the proposed knowledge distillation algorithm to make a fair comparison.
 
 ## Training/Validation accuracy
-|             |  Full Dataset |  50% Dataset  |  25% Dataset  |  10% Dataset  |
-|:-----------:|:-------------:|:-------------:|:-------------:|:-------------:|
-|   Methods   |      Accuracy | Last Accuracy | Last Accuracy | Last Accuracy |
-|   Teacher   |         78.59 |       -       |       -       |       -       |
-|   Student   |         76.25 |       -       |       -       |       -       |
-| Soft_logits |         76.57 |       -       |       -       |       -       |
+|   Methods   |      Accuracy |
+|:-----------:|:-------------:|
+|   Teacher   |         93.96 |
+|   Student   |         93.15 |
+| Soft_logits |         93.41 |

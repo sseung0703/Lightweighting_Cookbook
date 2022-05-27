@@ -8,6 +8,9 @@
 - flax
 - tensorflow ( to download CIFAR dataset )
 
+## Key features
+[Knowledge distillation](https://github.com/sseung0703/Lightweighting_Cookbook/tree/main/KD) | [Filter pruning](https://github.com/sseung0703/Lightweighting_Cookbook/tree/main/FP)
+
 # Basic training framework in JAX/FLAX
 ## How to use
 1. Move to the codebase.
