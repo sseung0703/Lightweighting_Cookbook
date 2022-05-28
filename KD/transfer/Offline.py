@@ -40,8 +40,9 @@ def create_distill_step(weight_decay, distill_objective):
             teacher_variables = {'params': teacher_state.params, 'batch_stats': teacher_state.batch_stats}
             teacher_logits, new_teacher_state = teacher_state.apply_fn(teacher_variables, batch['image'], train = False, mutable = ['keep_feats'])
 
+            print(new_state.keys(), new_teacher_state.keys())
             # objective function
-            loss = distill_objective(logits, teacher_logits, new_state, new_teacher_state, batch['label'], T = 4, alpha = 0.5)
+            loss = distill_objective(logits, teacher_logits, new_state, new_teacher_state, batch['label'])
             return loss, (new_state, logits, loss)
 
         grad_fn = jax.value_and_grad(forward, has_aux=True)

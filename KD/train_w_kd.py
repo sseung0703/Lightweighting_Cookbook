@@ -87,15 +87,16 @@ if __name__ == '__main__':
     ## Model building
     if 'ResNet' in args.student_arch:
         model_cls = getattr(ResNet, args.student_arch)
-        model = model_cls(num_classes = datasets.num_classes)#, keep_feats = distiller.keep_feats)
+        model = model_cls(num_classes = datasets.num_classes)
 
     if 'ResNet' in args.teacher_arch:
         model_cls = getattr(ResNet, args.teacher_arch)
-        teacher_model = model_cls(num_classes = datasets.num_classes)#, keep_feats = distiller.keep_feats)
+        teacher_model = model_cls(num_classes = datasets.num_classes)
 
     ## Distillation scheme selection
     distiller = importlib.import_module('distiller.' + args.distiller)
     model.keep_feats = distiller.keep_feats
+    teacher_model.keep_feats = distiller.keep_feats
 
     ## Training strategy selection
     transfer = importlib.import_module('transfer.' + args.transfer)

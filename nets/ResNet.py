@@ -77,7 +77,8 @@ class BottleneckResNetBlock(nn.Module):
                                  self.strides, name='conv_proj')(residual)
             residual = self.norm(name='norm_proj')(residual)
 
-        return self.act(residual + y)
+        y = self.act(residual + y)
+        return y
 
 class ResNet(nn.Module):
     """ResNetV1."""
@@ -125,6 +126,11 @@ class ResNet(nn.Module):
                                    act=self.act,
                                    name = 'block_%d_%d'%(i,j),
                                    )(x)
+
+            if ('stage','last') in keep_feats:
+                self.sow('keep_feats', 'keep_feats', x)
+                #self.sow('keep_feats', 'keep_feats', ['block_%d_%d'%(i,j), x])
+
         x = jnp.mean(x, axis=(1, 2))
         x = dense(self.num_classes, dtype=self.dtype, name = 'classifier', inputs = x)
 

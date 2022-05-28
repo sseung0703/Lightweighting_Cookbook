@@ -189,7 +189,7 @@ def create_eval_step(num_classes):
     def eval_step(state, batch):
         variables = {'params': state.params, 'batch_stats': state.batch_stats}
         logits = state.apply_fn(variables, batch['image'], train=False)
-
+        
         # objective function
         one_hot_labels = common_utils.onehot(batch['label'], num_classes=num_classes)
         loss = jnp.mean( optax.softmax_cross_entropy(logits=logits, labels=one_hot_labels) )
