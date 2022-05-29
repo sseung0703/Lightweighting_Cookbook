@@ -35,19 +35,15 @@
 </p>
 
 ### Online transfer
+- Benchmark will be shown.
 <p align="center">
 
 |   Methods   |      Accuracy |
 |:-----------:|:-------------:|
 |   Teacher   |         93.96 |
 |   Student   |         93.15 |
-| Soft_logits |         93.41 |
-|      AT     |         93.74 |
-</p>
-
-<p align="center">
-  <img src="https://user-images.githubusercontent.com/26036843/170808252-391a98c7-699b-456e-b758-da0a49ec30f7.jpeg" width="400">
-
+| Soft_logits |         xx.xx |
+|      AT     |         xx.xx |
 </p>
 
 ## Implemented Knowledge Distillation Methods
