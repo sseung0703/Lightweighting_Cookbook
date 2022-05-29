@@ -21,16 +21,18 @@ import optax
 '''
 
 ## Soft logits doesn't requires additional feature map.
-keep_feats = []
+keep_feats = ['classifier/out']
 
 def kld(x, y, T = 1, axis = -1, keepdims=True):
     return T * jnp.sum(jax.nn.softmax(x/T, axis = axis)*(jax.nn.log_softmax(x/T, axis = axis) - jax.nn.log_softmax(y/T, axis = axis)), axis = axis, keepdims=keepdims)
 
-def objective(logits, teacher_logits, model_state, teacher_state, label, T = 4, alpha = 0.5):
+def objective(logits, teacher_logits, student_feats, teacher_feats, label, T = 4, alpha = 0.5):
     one_hot_labels = common_utils.onehot(label, num_classes=logits.shape[-1])
     loss = jnp.mean( optax.softmax_cross_entropy(logits=logits, labels=one_hot_labels) )
-    kld_loss = jnp.mean(kld(logits, teacher_logits, T = T))
-    loss = loss * alpha + kld_loss * ( 1 - alpha)
+    
+    if student_feats is not None:
+        kld_loss = jnp.mean(kld(student_feats['classifier']['keep_feats'][0], teacher_feats['classifier']['keep_feats'][0], T = T))
+        loss = loss * alpha + kld_loss * ( 1 - alpha)
     return loss
 
 

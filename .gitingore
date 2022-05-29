@@ -1,5 +1,2 @@
-<<<<<<< Updated upstream
-__pycache__
-=======
-__py_cache__
->>>>>>> Stashed changes
+__pycache__/
+__pycache__/*

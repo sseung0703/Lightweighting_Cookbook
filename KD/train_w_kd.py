@@ -104,25 +104,34 @@ if __name__ == '__main__':
 
     ## Create student train state
     learning_rate_fn = optax.piecewise_constant_schedule(args.learning_rate, { int(dp * args.train_epoch * datasets.iter_len['train']) : args.decay_rate for dp in args.decay_points})
-    rng, key = jax.random.split(rng)
-    state = op_utils.create_train_state(key, model, datasets.input_size, learning_rate_fn)
-    utils.profile_model('Student: '+args.student_arch, datasets.input_size, state, model)
  
     ## Create teacher eval or train state according to the distiller and the transfer strategy.
-    rng, key = jax.random.split(rng)
     if args.transfer == 'Offline':
+        rng, key = jax.random.split(rng)
+        state = op_utils.create_train_state(key, model, datasets.input_size, learning_rate_fn)
+
         if args.teacher_param is None:
             raise NotImplementedError(
                 'Offline transfer strategy requires the pre-trained model.\
                  If it is not available, try other transfer strategies.'
             )
-        teacher_state = op_utils.restore_checkpoint(args.teacher_param, teacher_model)
-        teacher_state = op_utils.EvalState.create(apply_fn = teacher_model.apply, params = teacher_state['params'], batch_stats = teacher_state['batch_stats']) 
+        else:
+            teacher_state = op_utils.restore_checkpoint(args.teacher_param, teacher_model)
+            teacher_state = op_utils.EvalState.create(apply_fn = teacher_model.apply, params = teacher_state['params'], batch_stats = teacher_state['batch_stats']) 
+
+    elif args.transfer == 'Online':
+        rng, key = jax.random.split(rng)
+        state = op_utils.create_train_state(key, model, datasets.input_size, learning_rate_fn)
+
+        rng, key = jax.random.split(rng)
+        teacher_state = op_utils.create_train_state(key, teacher_model, datasets.input_size, learning_rate_fn)
 
     else:
         raise NotImplementedError(
             'Only offline transfer strategy is available currently.'
         )
+
+    utils.profile_model('Student: '+args.student_arch, datasets.input_size, state, model)
     utils.profile_model('Techer: '+args.teacher_arch, datasets.input_size, teacher_state, teacher_model)
 
     ## Common training part
@@ -139,13 +148,10 @@ if __name__ == '__main__':
 
     summary_writer = tensorboard.SummaryWriter(args.train_path)
 
-    #print(tree_util.tree_map(lambda p: p.shape, state.params))
-    #sys.exit()
-
     for epoch in range(start_epoch, args.train_epoch):
         # Train loop
         for batch in datasets.provider['train']():
-            state, metrics = distill_step(state, teacher_state, batch)
+            state, teacher_state, metrics = distill_step(state, teacher_state, batch)
             metrics = {'train/' + k: v for k, v in metrics.items()}
             
             logger.assign(metrics, num_data = batch['image'].shape[1])

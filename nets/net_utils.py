@@ -35,10 +35,10 @@ class LayerAddon:
             for target_layer, feat_type in keep_feats:
                 if target_layer == layer_.name:
                     if feat_type == 'in':
-                        layer_.sow('keep_feats', 'keep_feats', [target_layer, x])
+                        layer_.sow('keep_feats', 'keep_feats', x)
 
                     elif feat_type == 'out':
-                        layer_.sow('keep_feats', 'keep_feats', [target_layer, y])
+                        layer_.sow('keep_feats', 'keep_feats', y)
 
             flops, n_params = self.profiling(layer_, x, y)
             layer_.sow('flops', 'flops', flops)

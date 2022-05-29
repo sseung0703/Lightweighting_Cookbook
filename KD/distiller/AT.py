@@ -26,15 +26,15 @@ def at(x):
     y = jnp.reshape(jnp.mean(x**2, -1), [x.shape[0], -1])
     y = y / jnp.maximum(jnp.linalg.norm(y, axis = 1, keepdims=True), 1e-8)
     return y
-def objective(logits, teacher_logits, state, teacher_state, label, beta = 1e3):
+def objective(logits, teacher_logits, student_feats, teacher_feats, label, beta = 1e3):
     one_hot_labels = common_utils.onehot(label, num_classes=logits.shape[-1])
     loss = jnp.mean( optax.softmax_cross_entropy(logits=logits, labels=one_hot_labels) )
 
-    at_loss = []
-    for sf, tf in zip(tree_util.tree_leaves(state['keep_feats']), tree_util.tree_leaves(teacher_state['keep_feats'])):
-        at_loss.append( jnp.mean((at(sf) - at(tf))**2 ))
-
-    loss = loss + sum(at_loss) * beta
+    if student_feats is not None:
+        at_loss = []
+        for sf, tf in zip(tree_util.tree_leaves(student_feats), tree_util.tree_leaves(teacher_feats)):
+            at_loss.append( jnp.mean((at(sf) - at(tf))**2 ))
+        loss = loss + sum(at_loss) * beta
     return loss
 
 

@@ -129,7 +129,6 @@ class ResNet(nn.Module):
 
             if ('stage','last') in keep_feats:
                 self.sow('keep_feats', 'keep_feats', x)
-                #self.sow('keep_feats', 'keep_feats', ['block_%d_%d'%(i,j), x])
 
         x = jnp.mean(x, axis=(1, 2))
         x = dense(self.num_classes, dtype=self.dtype, name = 'classifier', inputs = x)

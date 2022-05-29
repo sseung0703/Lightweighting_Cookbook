@@ -18,7 +18,9 @@ import op_utils
 
 def create_distill_step(weight_decay, distill_objective):
     """
-        create training step with given knowledge distillation objective function
+        create training step with given knowledge distillation objective function and online learned teacher netwrok.
+        Note that, this repository assums that teacher network is just used for eleaborate training the student network and abandoned after training.
+
         This function is based on the below flax example.
         https://github.com/google/flax/blob/main/examples/imagenet/train.py
 
@@ -33,35 +35,41 @@ def create_distill_step(weight_decay, distill_objective):
     """
     @jax.jit
     def distill_step(state, teacher_state, batch):
-        def forward(params):
+        def forward(params, teacher_params):
             variables = {'params': params, 'batch_stats': state.batch_stats}
             logits, new_state = state.apply_fn(variables, batch['image'], mutable=['batch_stats', 'keep_feats'])
 
-            teacher_variables = {'params': teacher_state.params, 'batch_stats': teacher_state.batch_stats}
-            teacher_logits, new_teacher_state = teacher_state.apply_fn(teacher_variables, batch['image'], train = False, mutable = ['keep_feats'])
+            teacher_variables = {'params': teacher_params, 'batch_stats': teacher_state.batch_stats}
+            teacher_logits, new_teacher_state = teacher_state.apply_fn(teacher_variables, batch['image'], train = False, mutable = ['batch_stats','keep_feats'])
 
             # objective function
-            loss = distill_objective(logits, teacher_logits, new_state['keep_feats'], new_teacher_state['keep_feats'], batch['label'])
-            return loss, (new_state, logits, loss)
+            loss = distill_objective(logits, teacher_logits, new_state['keep_feats'], tree_util.tree_map(lambda x: jax.lax.stop_gradient(x),new_teacher_state['keep_feats']), batch['label'])
+            teacher_loss = distill_objective(teacher_logits, logits, None, None, batch['label'])
 
-        grad_fn = jax.value_and_grad(forward, has_aux=True)
-        aux, grads = grad_fn(state.params)
-        new_state, logits, loss = aux[1]
+            return loss + teacher_loss, (new_state, new_teacher_state, logits, loss)
+
+        aux, [grads, teacher_grads] = jax.value_and_grad(forward, [0,1], has_aux=True)(state.params, teacher_state.params)
+        new_state, new_teacher_state, logits, loss = aux[1]
         
         grads = jax.lax.pmean(grads, axis_name='batch')
         grads = op_utils.l2_weight_decay(state.params, grads, weight_decay)
-
-        accuracy = jnp.mean(jnp.argmax(logits, -1) == batch['label'])
         new_state = state.apply_gradients(
             grads=grads, batch_stats=new_state['batch_stats'])
 
+
+        teacher_grads = jax.lax.pmean(teacher_grads, axis_name='batch')
+        teacher_grads = op_utils.l2_weight_decay(teacher_state.params, teacher_grads, weight_decay)
+        new_teacher_state = teacher_state.apply_gradients(
+            grads=teacher_grads, batch_stats=new_teacher_state['batch_stats'])
+
+        accuracy = jnp.mean(jnp.argmax(logits, -1) == batch['label'])
         metrics = {
             'loss': loss,
             'accuracy': accuracy * 100,
         }
         metrics = jax.lax.pmean(metrics, axis_name='batch')
 
-        return new_state, teacher_state, metrics
+        return new_state, new_teacher_state, metrics
 
     distill_step = jax.pmap(distill_step, axis_name = "batch")
 
