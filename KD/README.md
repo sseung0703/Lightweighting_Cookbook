@@ -52,32 +52,31 @@
 
 ## Implemented Knowledge Distillation Methods
 - Knowledge distillation algorithms distill various information from various sensing points.
-- In the points of distilled information, it is hard two concretely catetorizing previous methods, but to my knowledge, I suggest the three categories, i.e., activation, embedding process, and inter-data relation.
-  - Activation: compare the student and teacher features without a further data-level interaction. For example, AB compares each feature maps activation boundaries.
-  - embedding process: extract information of embedding process by analyze how each feature maps are transformed in each stage. For example, FSP computes Gram matrix of two feature maps and defines it as flow of solving problem.
-  - Inter-data relation: build graph structure formed by inter-data relation. for example, RKD define distance and angle as edge features.
-  - Mixed knowledge: Some of algorithms build combination of several types of knowledge in physical or chemincal levels. For example, MHGD utilizes a knowledge of dataset embedding process which cares about not only single data's embedding process but also inter-data relation.
+- In the points of distilled information, it is hard to concretely categorize previous methods, but to my knowledge, I suggest the three categories, i.e., activation, embedding process, and inter-data relation.
+  - Activation: compare the student and teacher features without further data-level interaction. For example, AB compares each feature map activation boundaries.
+  - embedding process: extract information from the embedding process by analyzing how each feature map is transformed in each stage. For example, FSP computes the Gram matrix of two feature maps and defines it as a flow of solving a problem.
+  - Inter-data relation: build graph structure formed by inter-data relation. For example, RKD defines distance and angle as edge features.
+  - Mixed knowledge: Some algorithms build a combination of several types of knowledge at physical or chemical levels. For example, MHGD utilizes knowledge of dataset embedding process, which cares about not only single data's embedding process but also inter-data relation.
 
-- In the points of feature sensing position, there are two options, i.e., network output (a.k.a. embedded feature or response), and latent feature maps.
-- Each kind of feature has different charateristics so you should choose it as what you want to achieve.
+- In the points of feature sensing position, there are two options, i.e., network output (a.k.a. embedded feature or response) and latent feature maps.
+- Each feature has different characteristics, so you should choose it as what you want to achieve.
 
 ### Output (a.k.a. embedded feature or response) distillation:
   - Simple and efficient distillation schemes.
-  - Gives a minimal guidance to the student network. In other words, its constraints are useally weak to achieve SOTA performance but rarely cause over-constraints problem.
+  - Gives minimal guidance to the student network. In other words, its constraints are usually weak to achieve SOTA performance but rarely cause the over-constraints problem.
 
-- Soft-logit : The first knowledge distillation method for deep neural network. Knowledge is defined by softened logits. Because it is easy to handle it, many applied methods were proposed using it such as semi-supervised learning, defencing adversarial attack and so on.
+- Soft-logits: The first knowledge distillation method for a deep neural network. Knowledge is defined by softened logits. Because it is easy to handle, many applied methods were proposed using it, such as semi-supervised learning, defencing adversarial attack, and so on.
   - [Geoffrey Hinton, et al. Distilling the knowledge in a neural network. arXiv:1503.02531, 2015.](https://arxiv.org/abs/1503.02531)
 
 ### Latent feature distillation:
-  - Extract much more rich guidance to student network using multiple latent feature maps.
-  - Most of SOTA algorithm have taken this strategies, but it prone to give over-constraints that makes the student network hard to focus on its own task.
+  - Extract much more rich guidance to student networks using multiple latent feature maps.
+  - Most SOTA algorithm has taken this strategy, but it is prone to give over-constraints that makes the student network hard to focus on its own task.
 
-- Attention transfer (AT) : Knowledge is defined by attention map which is L2-norm of each feature point.
+- Attention transfer (AT): Knowledge is defined by an attention map which is the L2-norm of each feature point.
   - [Zagoruyko, Sergey et. al. Paying more attention to attention: Improving the performance of convolutional neural networks via attention transfer. arXiv preprint arXiv:1612.03928, 2016.](https://arxiv.org/pdf/1612.03928.pdf) [[the original project link](https://github.com/szagoruyko/attention-transfer)]
 
 ## Implemented Transfer Methods
 - Knowledge can be transferred by three kinds of strategies, i.e., offline, online, and self-distillation.
-  - Offline distillation: Utilize the pre-trained teacher network and it is freezed and used for extract knowledge. The knowledge is not changed during training framework and gives concrete guidance to the student network.
-  - Online distillation: Teacher network randomly initialized and train with the student network simultaneosly. At the initial points, information of teacher network is not so hard to train for the student network, so online learng strategy gives a gentle guidance. 
-  - Self-distillation: In the case of self-distillation, there is no teacher network, so each algorithm has its own strategies to build a pseudo teacher knowledge. 
-
+  - Offline distillation: Utilize the pre-trained teacher network, and it is frozen and used for extracting knowledge. The knowledge is not changed during the training framework and gives concrete guidance to the student network.
+  - Online distillation: The teacher network is randomly initialized and trained with the student network simultaneously. At the initial points, information about the teacher network is not so hard to train for the student network, so the online learning strategy gives gentle guidance.
+  - Self-distillation: In the case of self-distillation, there is no teacher network, so each algorithm has its own strategies to build pseudo teacher knowledge.
