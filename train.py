@@ -122,7 +122,9 @@ if __name__ == '__main__':
             logger.assign(metrics, num_data = batch['image'].shape[1])
 
         eval_result = logger.result(metrics.keys())
-        print ('Epoch {0:3d}: Test loss = {1:0.4f}, Test acc = {2:0.2f}'.format(epoch, eval_result['test/loss'], eval_result['test/accuracy']))
+        print('='*50)
+        print ('Epoch {0:3d}:\n\tTest loss = {1:0.4f}, Test acc = {2:0.2f}'.format(epoch, eval_result['test/loss'], eval_result['test/accuracy']))
+        print('='*50)
 
         for k, v in eval_result.items():
             summary_writer.scalar(k, v, epoch)
