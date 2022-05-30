@@ -26,7 +26,20 @@ keep_feats = ['classifier/out']
 def kld(x, y, T = 1, axis = -1, keepdims=True):
     return T * jnp.sum(jax.nn.softmax(x/T, axis = axis)*(jax.nn.log_softmax(x/T, axis = axis) - jax.nn.log_softmax(y/T, axis = axis)), axis = axis, keepdims=keepdims)
 
-def objective(logits, teacher_logits, student_feats, teacher_feats, label, T = 4, alpha = 0.5):
+def objective(logits, label, student_feats, teacher_feats, T = 4, alpha = 0.5):
+    """
+        Objective function to train student network with teacher knowledge.
+
+        Args:
+            logits: output of the student network. This repository assume that task of neural networks is classification.
+            label : label data
+            student_feats: student feature maps or vectors that expressed above.
+            teacher_feats: teacher feature maps or vectors that expressed above.
+            
+        Return:
+            loss : cross-entropy loss + distillation loss
+
+    """
     one_hot_labels = common_utils.onehot(label, num_classes=logits.shape[-1])
     loss = jnp.mean( optax.softmax_cross_entropy(logits=logits, labels=one_hot_labels) )
     

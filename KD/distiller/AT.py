@@ -24,9 +24,23 @@ keep_feats = ['stage/last']
 
 def at(x):
     y = jnp.reshape(jnp.mean(x**2, -1), [x.shape[0], -1])
-    y = y / jnp.maximum(jnp.linalg.norm(y, axis = 1, keepdims=True), 1e-8)
+    y = y / jnp.maximum(jnp.linalg.norm(y, axis = 1, keepdims=True), 1e-3)
     return y
-def objective(logits, teacher_logits, student_feats, teacher_feats, label, beta = 1e3):
+
+def objective(logits, student_feats, teacher_feats, label, beta = 1e3):
+    """
+       Objective function to train student network with teacher knowledge.
+
+       Args:
+           logits: output of the student network. This repository assume that task of neural networks is classification.
+           label : label data
+           student_feats: student feature maps or vectors that expressed above.
+           teacher_feats: teacher feature maps or vectors that expressed above.
+
+       Return:
+           loss : cross-entropy loss + distillation loss
+
+    """
     one_hot_labels = common_utils.onehot(label, num_classes=logits.shape[-1])
     loss = jnp.mean( optax.softmax_cross_entropy(logits=logits, labels=one_hot_labels) )
 

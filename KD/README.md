@@ -17,6 +17,7 @@
 - I have used ResNet-56 and ResNet-32 as the teacher and the student network, respectively.
 - All the algorithm is trained in the sample configuration, which is described in "distiller/*". I tried only several times to get acceptable performance, which means that my experimental results are perhaps not optimal.
 - Although some of the algorithms used soft-logits parallelly in the paper, I used only the proposed knowledge distillation algorithm to make a fair comparison.
+- Note that, the current neumerical values are results of only one trial, so there will be quite large variance. They will be improved when I take GCP credits.
 
 ### Offline transfer
 <p align="center">
@@ -41,12 +42,12 @@
 |:-----------:|:-------------:|
 |   Teacher   |         93.96 |
 |   Student   |         93.15 |
-| Soft_logits |         xx.xx |
-|      AT     |         xx.xx |
+| Soft_logits |         93.74 |
+|      AT     |         93.67 |
 </p>
 
 <p align="center">
-  <img src="https://user-images.githubusercontent.com/26036843/170808252-391a98c7-699b-456e-b758-da0a49ec30f7.jpeg" width="400">
+  <img src="https://user-images.githubusercontent.com/26036843/170944595-5b2fd667-210e-4f04-983a-637d5749279c.png" width="400">
 
 </p>
 

@@ -23,7 +23,8 @@ def create_distill_step(weight_decay, distill_objective):
         https://github.com/google/flax/blob/main/examples/imagenet/train.py
 
         Args:
-            weight_decay: l2 regularization strength
+            weight_decay: L2 regularization strength
+            distill_objective: Objective function to train student network with teacher knowledge. you can find each detail of objective function in distiller/*
 
         return:
             distill_step: training step for given model and trainable variables with knowledge distillation. 
@@ -33,6 +34,7 @@ def create_distill_step(weight_decay, distill_objective):
     """
     @jax.jit
     def distill_step(state, teacher_state, batch):
+       """
         def forward(params):
             variables = {'params': params, 'batch_stats': state.batch_stats}
             logits, new_state = state.apply_fn(variables, batch['image'], mutable=['batch_stats', 'keep_feats'])
@@ -41,7 +43,7 @@ def create_distill_step(weight_decay, distill_objective):
             teacher_logits, new_teacher_state = teacher_state.apply_fn(teacher_variables, batch['image'], train = False, mutable = ['keep_feats'])
 
             # objective function
-            loss = distill_objective(logits, teacher_logits, new_state['keep_feats'], new_teacher_state['keep_feats'], batch['label'])
+            loss = distill_objective(logits, new_state['keep_feats'], new_teacher_state['keep_feats'], batch['label'])
             return loss, (new_state, logits, loss)
 
         grad_fn = jax.value_and_grad(forward, has_aux=True)
