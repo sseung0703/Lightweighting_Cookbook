@@ -60,7 +60,7 @@
 - [ ] Knowledge distillation framework
   - [x] Basic framework
   - [x] Off-line distillation
-  - [ ] On-line distillation
+  - [x] On-line distillation
   - [ ] Self distillation
   - [ ] Enlarge the distillation algorithm zoo
 
