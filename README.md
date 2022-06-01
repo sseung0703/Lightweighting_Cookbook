@@ -65,8 +65,8 @@
   - [ ] Enlarge the distillation algorithm zoo
 
 - [ ] Filter pruning framework
-  - [ ] Basic framework
-  - [ ] Criterion-based pruning
+  - [x] Basic framework
+  - [x] Criterion-based pruning
   - [ ] Search-based pruning
   - [ ] Enlarge filter pruning algorithm zoo
 
