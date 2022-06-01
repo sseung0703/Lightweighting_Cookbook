@@ -15,7 +15,7 @@
 """Flax implementation of ResNet V1."""
 
 from functools import partial
-from typing import Any, Callable, Sequence, Tuple
+from typing import Any, Callable, Sequence, Tuple, Dict
 from os.path import split
 
 from flax import linen as nn
@@ -24,7 +24,6 @@ import jax.numpy as jnp
 from nets.net_utils import LayerAddon
 
 ModuleDef = Any
-
 
 class ResNetBlock(nn.Module):
     """ResNet block."""
@@ -38,19 +37,18 @@ class ResNetBlock(nn.Module):
     @nn.compact
     def __call__(self, x):
         residual = x
-        y = self.conv(self.filters, (3, 3), self.strides, name = self.name + '/conv0', inputs = x)
+        y = self.conv(features = self.filters, kernel_size = (3, 3), strides = self.strides, name = self.name + '/conv0', inputs = x)
         y = self.norm(name = self.name + '/bn0', inputs = y)
         y = self.act(y)
 
-        y = self.conv(self.filters, (3, 3), name = self.name + '/conv1', inputs = y)
-        y = self.norm(scale_init=nn.initializers.zeros, name = self.name + '/norm1', inputs = y)
+        y = self.conv(features = self.filters, kernel_size = (3, 3), name = self.name + '/conv1', inputs = y)
+        y = self.norm(scale_init=nn.initializers.zeros, name = self.name + '/bn1', inputs = y)
 
         if residual.shape != y.shape:
-            residual = self.conv(self.filters, (1, 1), self.strides, name = self.name + '/conv_proj', inputs = residual)
-            residual = self.norm(name= self.name + '/norm_proj', inputs = residual)
+            residual = self.conv(features = self.filters, kernel_size = (1, 1), strides = self.strides, name = self.name + '/conv_proj', inputs = residual)
+            residual = self.norm(name= self.name + '/bn_proj', inputs = residual)
 
         return self.act(residual + y)
-
 
 class BottleneckResNetBlock(nn.Module):
     """Bottleneck ResNet block."""
@@ -63,22 +61,22 @@ class BottleneckResNetBlock(nn.Module):
     @nn.compact
     def __call__(self, x):
         residual = x
-        y = self.conv(self.filters, (1, 1))(x)
-        y = self.norm()(y)
+        y = self.conv(features = self.filters, kernel_size = (1, 1), name = self.name + '/conv0', inputs = x)
+        y = self.norm(name = self.name + '/bn0', inputs = y)
         y = self.act(y)
-        y = self.conv(self.filters, (3, 3), self.strides)(y)
-        y = self.norm()(y)
+
+        y = self.conv(features = self.filters, kernel_size = (3, 3), strides = self.strides, name = self.name + '/conv1', inputs = y)
+        y = self.norm(name = self.name + '/bn1', inputs = y)
         y = self.act(y)
-        y = self.conv(self.filters * 4, (1, 1))(y)
-        y = self.norm(scale_init=nn.initializers.zeros)(y)
+
+        y = self.conv(features = self.filters * 4, kernel_size = (1, 1), name = self.name + '/conv2', inputs = x)
+        y = self.norm(scale_init=nn.initializers.zeros, name = self.name + '/bn2', inputs = y)
 
         if residual.shape != y.shape:
-            residual = self.conv(self.filters * 4, (1, 1),
-                                 self.strides, name='conv_proj')(residual)
-            residual = self.norm(name='norm_proj')(residual)
+            residual = self.conv(features = self.filters * 4, kernel_size = (1, 1), strides = self.strides, name = self.name + '/conv_proj', inputs = residual)
+            residual = self.norm(name= self.name + '/bn_proj', inputs = residual)
 
-        y = self.act(residual + y)
-        return y
+        return self.act(residual + y)
 
 class ResNet(nn.Module):
     """ResNetV1."""
@@ -86,9 +84,12 @@ class ResNet(nn.Module):
     block_cls: ModuleDef
     num_classes: int
     keep_feats: Sequence[str]
+    features_dict: Sequence[str]
+    mask_dict: Dict[str, ModuleDef]
     num_filters: int = 64
     dtype: Any = jnp.float32
     act: Callable = nn.relu
+
     conv: ModuleDef = LayerAddon(nn.Conv)
     norm: ModuleDef = LayerAddon(nn.BatchNorm)
 
@@ -96,17 +97,19 @@ class ResNet(nn.Module):
     def __call__(self, x, train: bool = True):
         keep_feats = [split(kp) for kp in self.keep_feats]
 
-        conv = partial(self.conv.addon_call, use_bias=False, dtype=self.dtype, keep_feats = keep_feats)
+        conv = partial(self.conv.addon_call, use_bias=False, dtype=self.dtype,
+                keep_feats = keep_feats, mask_dict = self.mask_dict, features_dict = self.features_dict)
         norm = partial(self.norm.addon_call,
                        use_running_average=not train,
                        momentum=0.9,
                        epsilon=1e-5,
                        dtype=self.dtype,
-                       keep_feats = keep_feats)
-        dense = partial(LayerAddon(nn.Dense).addon_call, keep_feats = keep_feats)
+                       keep_feats = keep_feats,
+                       mask_dict = self.mask_dict)
+        dense = partial(LayerAddon(nn.Dense).addon_call, keep_feats = keep_feats, mask_dict = self.mask_dict)
         
         if len(self.stage_sizes) == 3:
-            x = conv(self.num_filters, (3, 3), name='conv_init', inputs = x)
+            x = conv(features = self.num_filters, kernel_size = (3, 3), name='conv_init', inputs = x)
             x = norm(name='bn_init', inputs = x)
             x = nn.relu(x)
 
@@ -131,7 +134,7 @@ class ResNet(nn.Module):
                 self.sow('keep_feats', 'keep_feats', x)
 
         x = jnp.mean(x, axis=(1, 2))
-        x = dense(self.num_classes, dtype=self.dtype, name = 'classifier', inputs = x)
+        x = dense(features = self.num_classes, dtype=self.dtype, name = 'classifier', inputs = x)
 
         return x
 
@@ -158,18 +161,24 @@ ResNet56 = partial(ResNet, stage_sizes=[9, 9, 9],
                    block_cls=ResNetBlock,
                    num_filters = 16,
                    keep_feats = [],
+                   mask_dict = {},
+                   feature_dict = {}
                    )
 
 ResNet32 = partial(ResNet, stage_sizes=[5, 5, 5],
                    block_cls=ResNetBlock,
                    num_filters = 16,
                    keep_feats = [],
+                   mask_dict = {},
+                   features_dict = {}
                    )
 
 ResNet20 = partial(ResNet, stage_sizes=[3, 3, 3],
                    block_cls=ResNetBlock,
                    num_filters = 16,
                    keep_feats = [],
+                   mask_dict = {},
+                   features_dict = {}
                    )
 
 

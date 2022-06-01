@@ -48,7 +48,7 @@ parser.add_argument("--distiller", default = 'SoftLogits', type=str,
         help = 'Type of distilling teacher knowledge.')
 
 parser.add_argument("--transfer", default = 'Offline', type=str,
-        help = 'knowledge transfer strategy. currently only offline transfer is available')
+        help = 'knowledge transfer strategy.')
 
 parser.add_argument("--learning_rate", default = 1e-1, type=float)
 parser.add_argument("--weight_decay", default=5e-4, type=float)
@@ -69,7 +69,7 @@ parser.add_argument("--deterministic", default = False, action = 'store_true',
                 Even you properly set the flags or PRNG, the result may be different from this tutorial because the algorithm tuning and/or the hardware unit varies depending on the GPU generation.')
 
 args = parser.parse_args()
-args.home_path = os.path.dirname(os.path.abspath(__file__))
+args.home_path = os.path.dirname(os.getcwd())
 os.environ['CUDA_VISIBLE_DEVICES']=','.join(args.gpu_id)
 os.environ['XLA_PYTHON_CLIENT_PREALLOCATE'] = '0'
 if args.deterministic:
@@ -131,8 +131,8 @@ if __name__ == '__main__':
             'Only offline transfer strategy is available currently.'
         )
 
-    utils.profile_model('Student: '+args.student_arch, datasets.input_size, state, model)
-    utils.profile_model('Techer: '+args.teacher_arch, datasets.input_size, teacher_state, teacher_model)
+    utils.profile_model('Student: '+args.student_arch, datasets.input_size, state, model.dtype)
+    utils.profile_model('Techer: '+args.teacher_arch, datasets.input_size, teacher_state, teacher_model.dtype)
 
     ## Common training part
     if args.trained_param is not None:

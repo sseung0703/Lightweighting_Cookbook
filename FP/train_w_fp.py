@@ -1,7 +1,9 @@
 import os
+import sys
 import time
 import argparse
 import warnings
+import importlib
 
 import numpy as np
 
@@ -12,19 +14,24 @@ from jax import tree_util
 from flax.metrics import tensorboard
 import optax
 
+sys.path.append(os.path.split(os.getcwd())[0])
+
 from nets import ResNet
 from dataloader import CIFAR
 import op_utils
 import utils
+
+import prune_utils
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 warnings.filterwarnings("ignore")
 
 parser = argparse.ArgumentParser(description='')
 
-parser.add_argument("--train_path", default="~/test", type=str,
+## Student arguments
+parser.add_argument("--train_path", default="../test", type=str,
         help = 'training path to save results filing including source code, checkpoint, and tensorboard log')
-parser.add_argument("--arch", default='ResNet56', type=str,
+parser.add_argument("--arch", default='ResNet32', type=str,
         help = 'network architecture, currently only ResNet family is available')
 parser.add_argument("--trained_param", type=str,
         help = 'trained parameter or checkpoint directory to be restored.\
@@ -33,6 +40,15 @@ parser.add_argument("--data_path", type=str,
         help = 'Home directory of dataset for large datasets')
 parser.add_argument("--dataset", default='CIFAR10', type=str,
         help = 'trained dataset, currently only CIFAR datasets are available')
+
+## Filter pruning arguments
+parser.add_argument("--criterion", default = 'FilterNorm', type=str,
+        help = 'criterion to score filter importance.')
+
+parser.add_argument("--strategy", default = 'AtOnce', type=str,
+        help = 'strategy to prune the filters')
+
+parser.add_argument("--frr", default = 0.5, type=float)
 
 parser.add_argument("--learning_rate", default = 1e-1, type=float)
 parser.add_argument("--weight_decay", default=5e-4, type=float)
@@ -53,13 +69,13 @@ parser.add_argument("--deterministic", default = False, action = 'store_true',
                 Even you properly set the flags or PRNG, the result may be different from this tutorial because the algorithm tuning and/or the hardware unit varies depending on the GPU generation.')
 
 args = parser.parse_args()
-args.home_path = os.path.dirname(os.path.abspath(__file__))
+args.home_path = os.getcwd()
 os.environ['CUDA_VISIBLE_DEVICES']=','.join(args.gpu_id)
 os.environ['XLA_PYTHON_CLIENT_PREALLOCATE'] = '0'
 if args.deterministic:
     os.environ['TF_DETERMINISTIC_OPS'] = '1'
 
-print(f"\n Detected device: {jax.local_devices()} \n")
+print(f"\n Detected device: {jax.local_devices()}\n")
 
 if __name__ == '__main__':
     rng = jax.random.PRNGKey(args.seed)
@@ -68,28 +84,47 @@ if __name__ == '__main__':
     rng, key = jax.random.split(rng)
     datasets = CIFAR.build_dataset_providers(args, key)
 
+    ## Model building
     if 'ResNet' in args.arch:
         model_cls = getattr(ResNet, args.arch)
         model = model_cls(num_classes = datasets.num_classes)
-    
+
+    model.mask_dict = prune_utils.MaskInitialization(args.arch, model)
+    criterion = importlib.import_module('criteria.' + args.criterion)
+    model.mask_dict['criterion'] = criterion.measure
+
     learning_rate_fn = optax.piecewise_constant_schedule(args.learning_rate, { int(dp * args.train_epoch * datasets.iter_len['train']) : args.decay_rate for dp in args.decay_points})
     rng, key = jax.random.split(rng)
     state = op_utils.create_train_state(key, model, datasets.input_size, learning_rate_fn)
-    utils.profile_model(args.arch, datasets.input_size, state, model.dtype)
+
+    ori_flops, ori_n_params = utils.profile_model(args.arch, datasets.input_size, state, model.dtype)
+
+    if args.trained_param is not None:
+        old_state = op_utils.restore_checkpoint(args.trained_param)
+        state = state.replace( params = state.params.copy(old_state['params']), batch_stats = old_state['batch_stats'] ) 
+    start_epoch = 0
+
+    if args.strategy == 'AtOnce':
+        strategy = importlib.import_module('strategy.' + args.strategy)
+        state = strategy.prune( model, state, datasets, args.frr, ori_flops, ori_n_params )
+
+    else:
+        raise NotImplementedError(
+            'Only offline transfer strategy is available currently.'
+        )
+    
+    model, params, batch_stats = prune_utils.actual_pruning(args.arch, model, datasets.input_size, state)
+    rng, key = jax.random.split(rng)
+    state = op_utils.create_train_state(key, model, datasets.input_size, learning_rate_fn, params, batch_stats)
 
     train_step, sync_batch_stats = op_utils.create_train_step(args.weight_decay)
     eval_step = op_utils.create_eval_step(datasets.num_classes)
 
-    if args.trained_param is not None:
-        state = op_utils.restore_checkpoint(args.trained_param, state)
-        start_epoch = state.step.item() // datasets.iter_len['train']
-    else:
-        start_epoch = 0
-
+    tic = time.time()
     logger = utils.summary()
+
     summary_writer = tensorboard.SummaryWriter(args.train_path)
 
-    tic = time.time()
     for epoch in range(start_epoch, args.train_epoch):
         # Train loop
         for batch in datasets.provider['train']():
@@ -114,6 +149,7 @@ if __name__ == '__main__':
             summary_writer.scalar(k, v, epoch)
  
         test_tic = time.time()
+
         # Test loop    
         for batch in datasets.provider['test']():
             metrics = eval_step(state, batch)

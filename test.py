@@ -55,7 +55,7 @@ if __name__ == '__main__':
     eval_stae = replicate(eval_state)
     eval_step = op_utils.create_eval_step(datasets.num_classes)
 
-    utils.profile_model(args.arch, datasets.input_size, eval_state, model)
+    utils.profile_model(args.arch, datasets.input_size, eval_state, model.dtype)
 
     logger = utils.summary()
     for batch in datasets.provider['test']():

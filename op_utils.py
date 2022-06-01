@@ -85,7 +85,7 @@ def l2_weight_decay(params, grads, weight_decay):
     new_grads = jax.tree_unflatten(treedef, grads_flat)
     return new_grads
 
-def create_train_state(rng, model, input_size, learning_rate_fn):
+def create_train_state(rng, model, input_size, learning_rate_fn, params = None, batch_stats = None):
     """
         Initialize components for training.
         This function is based on the below flax example.
@@ -101,9 +101,9 @@ def create_train_state(rng, model, input_size, learning_rate_fn):
                 details can be found at https://github.com/google/flax/blob/main/flax/training/train_state.py
 
     """
-
-    params, batch_stats = initialized(rng, input_size, model)
-
+    if params is None:
+        params, batch_stats = initialized(rng, input_size, model)
+    
     tx = optax.sgd(
         learning_rate = learning_rate_fn,
         momentum=0.9,
