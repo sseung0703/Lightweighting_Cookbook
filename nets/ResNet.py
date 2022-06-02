@@ -162,7 +162,7 @@ ResNet56 = partial(ResNet, stage_sizes=[9, 9, 9],
                    num_filters = 16,
                    keep_feats = [],
                    mask_dict = {},
-                   feature_dict = {}
+                   features_dict = {}
                    )
 
 ResNet32 = partial(ResNet, stage_sizes=[5, 5, 5],
