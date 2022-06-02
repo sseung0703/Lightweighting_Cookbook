@@ -106,7 +106,7 @@ if __name__ == '__main__':
 
     if args.strategy == 'AtOnce':
         strategy = importlib.import_module('strategy.' + args.strategy)
-        state = strategy.prune( model, state, datasets, args.frr, ori_flops, ori_n_params )
+        state = strategy.prune(state, datasets, args.frr, ori_flops)
 
     else:
         raise NotImplementedError(

@@ -9,14 +9,24 @@ import flax.linen as nn
 
 def measure(name, layer, x, y):
     """
-        Applies a linear transformation to the inputs along the last dimension.
+        This criterion defines the filter norm as its importance.
+
+        Args:
+            name: name of layer to check whether importance should be collected at the given layer or not.
+            layer: layer of the network
+            x: input data of the layer
+            y: output data of the layer
 
         Returns:
-            The transformed input.
+            importance: measured importance. if given layer is not utilized to measure importance, return None
     """
     if 'conv' in name:
         kernel = layer.variables['params']['kernel']
         Do = kernel.shape[-1]
-        return jnp.linalg.norm(jnp.reshape(kernel, [-1, Do]), axis = 0)
+        importance = jnp.linalg.norm(jnp.reshape(kernel, [-1, Do]), axis = 0)
     else:
-        return 
+        importance = None
+    return importance
+
+    #def collect_importance():
+        

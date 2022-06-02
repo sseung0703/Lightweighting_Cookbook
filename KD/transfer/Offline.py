@@ -34,7 +34,6 @@ def create_distill_step(weight_decay, distill_objective):
     """
     @jax.jit
     def distill_step(state, teacher_state, batch):
-       """
         def forward(params):
             variables = {'params': params, 'batch_stats': state.batch_stats}
             logits, new_state = state.apply_fn(variables, batch['image'], mutable=['batch_stats', 'keep_feats'])

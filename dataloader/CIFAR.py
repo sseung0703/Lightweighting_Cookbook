@@ -29,8 +29,9 @@ class build_dataset_providers:
             >>> datasets = CIFAR.build_dataset_providers(args, key)
             >>> for data in datasets.provider['train']():
     """
-    def __init__(self, args, rng, test_only = False):
+    def __init__(self, args, rng, dtype = jnp.float32, test_only = False):
         self.args = args
+        self.dtype = dtype
 
         if args.dataset == 'CIFAR10':
             train_images, train_labels, test_images, test_labels = self.Cifar10()
