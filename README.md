@@ -77,3 +77,11 @@
   - [ ] Enlarge quantization algorithm zoo
 
 - [ ] Tools for handy usage.
+
+# Acknowledge
+- Google ML Ecosystem team supported this work by providing Google Cloud Credit.
+<p align="center">
+  <img src="https://user-images.githubusercontent.com/26036843/171530370-7ccb53c8-2dff-46c5-af4b-19e37fdddc6d.png" width="400"><br>
+</p>
+
+
