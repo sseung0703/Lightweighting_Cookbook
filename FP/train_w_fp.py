@@ -96,11 +96,10 @@ if __name__ == '__main__':
     learning_rate_fn = optax.piecewise_constant_schedule(args.learning_rate, { int(dp * args.train_epoch * datasets.iter_len['train']) : args.decay_rate for dp in args.decay_points})
     rng, key = jax.random.split(rng)
     state = op_utils.create_train_state(key, model, datasets.input_size, learning_rate_fn)
-
     ori_flops, ori_n_params = utils.profile_model(args.arch, datasets.input_size, state, model.dtype)
 
     if args.trained_param is not None:
-        old_state = op_utils.restore_checkpoint(args.trained_param)
+        model, old_state = op_utils.restore_checkpoint(model, args.trained_param)
         state = state.replace( params = state.params.copy(old_state['params']), batch_stats = old_state['batch_stats'] ) 
     start_epoch = 0
 

@@ -49,13 +49,16 @@ def prune(state, datasets, frr, ori_flops, collect_importance):
         cur_frr = 1 - cur_flops/ori_flops
         if cur_frr == target_frr or mid in [l,r]:
             if cur_frr < target_frr:
-                th = th_list[mid-1]
+                th = th_list[mid+1]
                 new_mask_params = {k: imp2mask(p, imp, th) for (k,p), (k2, imp) in zip(mask_params.items(), importance.items())}
                 state = state.replace(params = state.params.copy(new_mask_params))
-                utils.profile_model('{0:.2f}% of FLOPS runed network'.format(cur_frr*100), datasets.input_size, state, datasets.dtype, log = True)
+
+                cur_flops = utils.profile_model('', datasets.input_size, state, datasets.dtype, log = True)[0]
+                print('{0:.2f}% of FLOPS pruned network'.format((1 -cur_flops/ori_flops)*100))
  
             else:
-                utils.profile_model('{0:.2f}% of FLOPS runed network'.format(cur_frr*100), datasets.input_size, state, datasets.dtype, log = True)
+                cur_flops = utils.profile_model('', datasets.input_size, state, datasets.dtype, log = True)[0]
+                print('{0:.2f}% of FLOPS pruned network'.format((1 -cur_flops/ori_flops)*100))
 
             return state
                                                       

@@ -21,10 +21,9 @@ def measure(name, layer, x, y):
         Returns:
             importance: measured importance. if given layer is not utilized to measure importance, return None
     """
-    if 'conv' in name:
-        kernel = layer.variables['params']['kernel']
-        Do = kernel.shape[-1]
-        importance = jnp.linalg.norm(jnp.reshape(kernel, [-1, Do]), axis = 0)
+    if 'bn' in name:
+        gamma = layer.variables['params']['scale']
+        importance = jnp.reshape(jnp.abs(gamma), [-1])
     else:
         importance = None
     return importance
@@ -32,7 +31,6 @@ def measure(name, layer, x, y):
 def collect_importance(state, datasets):
     variables = {'params': state.params, 'batch_stats': state.batch_stats}
     variables = jax_utils.unreplicate(variables)
-
     input_size = (1, *datasets.input_size)
     dummy_input = jnp.ones(input_size, datasets.dtype)
 
