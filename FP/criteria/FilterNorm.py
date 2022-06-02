@@ -5,6 +5,7 @@ import jax.numpy as jnp
 from jax import tree_util
 
 import flax
+from flax import jax_utils
 import flax.linen as nn
 
 def measure(name, layer, x, y):
@@ -28,5 +29,14 @@ def measure(name, layer, x, y):
         importance = None
     return importance
 
-    #def collect_importance():
-        
+def collect_importance(state, datasets):
+    variables = {'params': state.params, 'batch_stats': state.batch_stats}
+    variables = jax_utils.unreplicate(variables)
+
+    input_size = (1, *datasets.input_size)
+    dummy_input = jnp.ones(input_size, datasets.dtype)
+
+    _, new_state = state.apply_fn(variables, dummy_input, mutable = ['batch_stats','importance'])
+    importance = new_state['importance']
+    importance = {k: sum([i for i in imp['importance'] if i is not None]) for k,imp in importance.items()}
+    return importance

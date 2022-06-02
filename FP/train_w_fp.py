@@ -106,11 +106,11 @@ if __name__ == '__main__':
 
     if args.strategy == 'AtOnce':
         strategy = importlib.import_module('strategy.' + args.strategy)
-        state = strategy.prune(state, datasets, args.frr, ori_flops)
+        state = strategy.prune(state, datasets, args.frr, ori_flops, criterion.collect_importance )
 
     else:
         raise NotImplementedError(
-            'Only offline transfer strategy is available currently.'
+            'Other strategies are not implemented.'
         )
     
     model, params, batch_stats = prune_utils.actual_pruning(args.arch, model, datasets.input_size, state)
