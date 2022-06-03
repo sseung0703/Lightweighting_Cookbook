@@ -32,6 +32,7 @@ def prune(state, datasets, frr, ori_flops, collect_importance):
 
     def imp2mask(m, imp, th):
         mask = jnp.logical_or(imp > th, imp == jnp.max(imp)).astype(jnp.float32)
+        print(m)
         return jnp.reshape(mask, m.shape)
 
     def binarySearch(state, mask_params, th_list, l, r, target_frr):
@@ -48,9 +49,9 @@ def prune(state, datasets, frr, ori_flops, collect_importance):
         if cur_frr == target_frr or mid in [l,r]:
             if cur_frr < target_frr:
                 th = th_list[mid+1]
-                new_mask_params = {k: imp2mask(p, imp, th) for (k,p), (k2, imp) in zip(mask_params.items(), importance.items())}
-                state = state.replace(params = state.params.copy(new_mask_params))
-
+                mask, treedef = tree_util.tree_flatten(mask_params)
+                new_mask = [imp2mask(m, imp, th) for m, imp in zip(mask, tree_util.tree_leaves(importance))]
+                new_mask_params = tree_util.tree_unflatten(treedef, new_mask)
                 cur_flops = utils.profile_model('', datasets.input_size, state, datasets.dtype, log = True)[0]
                 print('{0:.2f}% of FLOPS pruned network'.format((1 -cur_flops/ori_flops)*100))
  
