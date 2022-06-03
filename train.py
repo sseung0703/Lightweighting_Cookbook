@@ -81,7 +81,7 @@ if __name__ == '__main__':
     eval_step = op_utils.create_eval_step(datasets.num_classes)
 
     if args.trained_param is not None:
-        state = op_utils.restore_checkpoint(args.trained_param, state)
+        model, state = op_utils.restore_checkpoint(model, args.trained_param, state)
         start_epoch = state.step.item() // datasets.iter_len['train']
     else:
         start_epoch = 0

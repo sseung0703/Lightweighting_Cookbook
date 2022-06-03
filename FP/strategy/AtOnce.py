@@ -27,22 +27,20 @@ def prune(state, datasets, frr, ori_flops, collect_importance):
     """
     ## Gather importance of each mask
     importance = collect_importance(state, datasets)
-    
     th_list = jnp.sort(jnp.concatenate(tree_util.tree_leaves(importance), 0))
     mask_params = {k:p for k,p in state.params.items() if 'mask' in k}
 
-
-    def imp2mask(p, imp, th):
+    def imp2mask(m, imp, th):
         mask = jnp.logical_or(imp > th, imp == jnp.max(imp)).astype(jnp.float32)
-        mask = jnp.stack([mask] * p['mask'].shape[0])
-        p = p.copy({'mask': mask})
-        return p
-
+        return jnp.reshape(mask, m.shape)
 
     def binarySearch(state, mask_params, th_list, l, r, target_frr):
         mid = l + (r - l) // 2
         th = th_list[mid]
-        new_mask_params = {k: imp2mask(p, imp, th) for (k,p), (k2, imp) in zip(mask_params.items(), importance.items())}
+        mask, treedef = tree_util.tree_flatten(mask_params)
+        new_mask = [imp2mask(m, imp, th) for m, imp in zip(mask, tree_util.tree_leaves(importance))]
+        new_mask_params = tree_util.tree_unflatten(treedef, new_mask)
+
         state = state.replace(params = state.params.copy(new_mask_params))
         cur_flops = utils.profile_model('', datasets.input_size, state, datasets.dtype, log = False)[0]
         

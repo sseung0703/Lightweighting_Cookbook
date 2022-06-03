@@ -116,7 +116,7 @@ if __name__ == '__main__':
                  If it is not available, try other transfer strategies.'
             )
         else:
-            teacher_state = op_utils.restore_checkpoint(args.teacher_param, teacher_model)
+            teacher_model, teacher_state = op_utils.restore_checkpoint(teacher_model, args.teacher_param)
             teacher_state = op_utils.EvalState.create(apply_fn = teacher_model.apply, params = teacher_state['params'], batch_stats = teacher_state['batch_stats']) 
 
     elif args.transfer == 'Online':
@@ -136,7 +136,7 @@ if __name__ == '__main__':
 
     ## Common training part
     if args.trained_param is not None:
-        state = op_utils.restore_checkpoint(args.trained_param, state)
+        model, state = op_utils.restore_checkpoint(model, args.trained_param, state)
         start_epoch = state.step.item() // datasets.iter_len['train']
     else:
         start_epoch = 0

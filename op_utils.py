@@ -10,7 +10,7 @@ from flax import jax_utils
 from flax.training import checkpoints
 from flax.training import common_utils
 from flax.training import train_state
-from flax import core
+from flax.core import FrozenDict
 from flax import struct
 import optax
 
@@ -53,7 +53,7 @@ class EvalState(struct.PyTreeNode):
     """
 
     apply_fn: Callable = struct.field(pytree_node=False)
-    params: core.FrozenDict[str, Any]
+    params: FrozenDict[str, Any]
     batch_stats: Any
 
     @classmethod
@@ -103,7 +103,24 @@ def create_train_state(rng, model, input_size, learning_rate_fn, params = None, 
     """
     if params is None:
         params, batch_stats = initialized(rng, input_size, model)
-    
+    else:
+        features_dict = {}
+        def features_check(keys, variables):
+            v = variables[list(variables.keys())[0]]
+            features_dict[keys[-1]] = v.shape[-1]
+
+        def rebuild_tree(frozen_dict, K):
+            new_frozen_dict = {}
+            for k, layer in frozen_dict.items():
+                if 'mask' not in k:
+                    if any([ not(isinstance(p, FrozenDict) or isinstance(p, dict)) for _, p in layer.items()]) and layer:
+                        features_check(K+[k], layer)
+                    else:
+                        rebuild_tree(layer, K+[k])
+
+        rebuild_tree(params, [])
+        model.features_dict = features_dict
+
     tx = optax.sgd(
         learning_rate = learning_rate_fn,
         momentum=0.9,
@@ -220,16 +237,15 @@ def save_checkpoint(state, train_path, epoch):
         state = jax.device_get(jax.tree_map(lambda x: x[0], state))
         checkpoints.save_checkpoint(train_path, state, epoch, keep=3)
 
-def restore_checkpoint(trained_param, state = None):
+def restore_checkpoint(model, trained_param, state = None):
     """
         Restore checkpoint of flax model.
         If state is given, components of state will be replaced by checkpoints,
         otherwise, dictionary type of checkpoints is returned.
 
         Args:
-            state: model parameters to be saved.
             train_path: str or pathlib-like path to store checkpoint files in.
-            epoch: subname of checkpoint
+            state: model parameters to be saved.
 
         return:
             restored_state: PyTreeNode or dictionary type of checkpoint
@@ -243,6 +259,28 @@ def restore_checkpoint(trained_param, state = None):
 
     restored_state = checkpoints.restore_checkpoint(ckpt_dir, state, prefix = prefix)
     restored_state = jax_utils.replicate(restored_state)
-    return restored_state
+
+    features_dict = {}
+    def features_check(keys, variables):
+        v = variables[list(variables.keys())[0]]
+        features_dict[keys[-1]] = v.shape[-1]
+
+    def rebuild_tree(frozen_dict, K):
+        new_frozen_dict = {}
+        for k, layer in frozen_dict.items():
+            if 'mask' not in k:
+                if any([ not(isinstance(p, FrozenDict) or isinstance(p, dict)) for _, p in layer.items()]) and layer:
+                    features_check(K+[k], layer)
+                else:
+                    rebuild_tree(layer, K+[k])
+    if isinstance(restored_state, dict):
+        rebuild_tree(restored_state['params'], [])
+        model.features_dict = features_dict
+    else:
+        rebuild_tree(restored_state.params, [])
+        model.features_dict = features_dict
+        restored_state = restored_state.replace(apply_fn = model.apply_fn)
+
+    return model, restored_state
 
 

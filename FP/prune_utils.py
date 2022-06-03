@@ -88,6 +88,8 @@ def actual_pruning(arch, model, input_size, state):
     _, new_state = state.apply_fn(variables, dummy_input, train = False, mutable = ['in_mask', 'out_mask'])
     in_mask = new_state['in_mask']
     out_mask = new_state['out_mask']
+
+    #print(tree_util.tree_map(lambda x: sum(x), out_mask))
  
     features_dict = {}
 
@@ -104,13 +106,13 @@ def actual_pruning(arch, model, input_size, state):
 
         pruned_variables = {}
         for k, v in variables.items():
-            if 'conv' in keys[-1]:
+            if 'conv' in keys[-1] or 'classifier' in keys[-1]:
                 if 'kernel' in k:
                     if in_mask is not None:
-                        v = v[:,:,in_mask.reshape(-1).astype(bool)]
+                        v = v[...,in_mask.reshape(-1).astype(bool),:]
 
                     if out_mask is not None:
-                        v = v[:,:,:,out_mask.reshape(-1).astype(bool)]
+                        v = v[...,out_mask.reshape(-1).astype(bool)]
                 if 'bias' in k:
                     if out_mask is not None:
                         v = v[out_mask.reshape(-1).astype(bool)]
@@ -119,17 +121,6 @@ def actual_pruning(arch, model, input_size, state):
                 if out_mask is not None:
                     v = v[out_mask.reshape(-1).astype(bool)]
 
-            if 'classifier' in keys[-1]:
-                if 'kernel' in k:
-                    if in_mask is not None:
-                        v = v[in_mask.reshape(-1).astype(bool)]
-
-                    if out_mask is not None:
-                        v = v[:,out_mask.reshape(-1).astype(bool)]
-
-                if 'bias' in k:
-                    if out_mask is not None:
-                        v = v[out_mask.reshape(-1).astype(bool)]
             pruned_variables[k] = v
 
         return pruned_variables

@@ -131,4 +131,3 @@ class LayerAddon:
                 elif feat_type == 'out':
                     layer_.sow('keep_feats', 'keep_feats', y)
 
-

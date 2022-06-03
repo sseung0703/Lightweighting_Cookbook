@@ -9,7 +9,7 @@ import jax
 import jax.numpy as jnp
 
 from flax.jax_utils import replicate
-
+from flax.core import FrozenDict
 from nets import ResNet
 from dataloader import CIFAR
 import op_utils
@@ -50,9 +50,25 @@ if __name__ == '__main__':
     model_cls = getattr(ResNet, args.arch)
     model = model_cls(num_classes = datasets.num_classes)
     
-    state = op_utils.restore_checkpoint(args.trained_param, model)
+    model, state = op_utils.restore_checkpoint(model, args.trained_param)
+    
+    features_dict = {}
+    def pruning(keys, variables):
+        v = variables[list(variables.keys())[0]]
+        features_dict[keys[-1]] = v.shape[-1]
+
+    def rebuild_tree(frozen_dict, K):
+        new_frozen_dict = {}
+        for k, layer in frozen_dict.items():
+            if 'mask' not in k:
+                if any([ not(isinstance(p, FrozenDict) or isinstance(p, dict)) for _, p in layer.items()]) and layer:
+                    pruning(K+[k], layer)
+                else:
+                    rebuild_tree(layer, K+[k])
+    rebuild_tree(state['params'], [])
+    model.features_dict = features_dict
+
     eval_state = op_utils.EvalState.create(apply_fn = model.apply, params = state['params'], batch_stats = state['batch_stats'])
-    eval_stae = replicate(eval_state)
     eval_step = op_utils.create_eval_step(datasets.num_classes)
 
     utils.profile_model(args.arch, datasets.input_size, eval_state, model.dtype)

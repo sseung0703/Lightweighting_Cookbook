@@ -76,7 +76,7 @@ def profile_model(arch, input_size, state, dtype, log = True):
     variables = {'params': tree_util.tree_map(lambda x: jax.device_put(x, cpu), state.params), 'batch_stats': tree_util.tree_map(lambda x: jax.device_put(x, cpu), state.batch_stats)}
     variables = jax_utils.unreplicate(variables)
 
-    _, state = state.apply_fn(variables, jnp.ones(input_size, dtype), train=False, mutable=['flops', 'n_params'])
+    _, state = state.apply_fn(variables, jnp.ones(input_size, dtype), train = False, mutable=['flops', 'n_params'])
 
     flops = int(sum(tree_util.tree_leaves(state['flops'])))
     n_params = int(sum(tree_util.tree_leaves(state['n_params'])))
