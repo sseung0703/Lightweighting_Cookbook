@@ -27,7 +27,7 @@
 ```
 
 ## Experimental comparison with other common deep learning libraries, i.e., Tensorflow2 and Pytorch
-- Hardware: GTX 1080
+- Hardware: GTX 1080ti
 - Tensorflow implementation [[link](https://github.com/sseung0703/EKG)]
 - Pytorch implementation [[link](https://github.com/akamaster/pytorch_resnet_cifar10)]
 - In order to check only training time except for model and data preparation, training time is calculated from the second to the last epoch.
@@ -35,6 +35,9 @@
 - Note that Accuracy on CIFAR dataset has a quite large variance <br>
   so that you should focus on another metrics, i.e., training time.
 - As you can notice, JAX and TF are much faster than Pytorch because of JIT compiling.
+  - JIT compiling anlyzes computational graphs and cuts-off the meaningless memory allocations.
+  - It means that your PyTorch codes utilize GPU 100%, but parts of them are meaningless for actual training.
+
 
 <p align="center">
 
