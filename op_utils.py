@@ -165,7 +165,7 @@ def create_train_step(weight_decay):
         aux, grads = grad_fn(state.params)
         new_state, logits, loss = aux[1]
         
-        grads = jax.lax.pmean(grads, axis_name='batch')
+        grads = jax.lax.pmean(grads, axis_name='i')
         grads = l2_weight_decay(state.params, grads, weight_decay)
 
         accuracy = jnp.mean(jnp.argmax(logits, -1) == batch['label'])
@@ -176,13 +176,13 @@ def create_train_step(weight_decay):
             'loss': loss,
             'accuracy': accuracy * 100,
         }
-        metrics = jax.lax.pmean(metrics, axis_name='batch')
+        metrics = jax.lax.pmean(metrics, axis_name='i')
 
         return new_state, metrics
 
-    train_step = jax.pmap(train_step, axis_name = 'batch')
+    train_step = jax.pmap(train_step, axis_name = 'i')
 
-    cross_replica_mean = jax.pmap(lambda x: jax.lax.pmean(x, 'batch'), 'batch')
+    cross_replica_mean = jax.pmap(lambda x: jax.lax.pmean(x, 'i'), 'i')
 
     def sync_batch_stats(state):
         return state.replace(batch_stats=cross_replica_mean(state.batch_stats))
@@ -216,10 +216,10 @@ def create_eval_step(num_classes):
             'loss': loss,
             'accuracy': accuracy * 100,
         }
-        metrics = jax.lax.pmean(metrics, axis_name='batch')
+        metrics = jax.lax.pmean(metrics, axis_name='i')
         return metrics
 
-    eval_step = jax.pmap(eval_step, axis_name = "batch")
+    eval_step = jax.pmap(eval_step, axis_name = 'i')
     return eval_step
 
 def save_checkpoint(state, train_path, epoch):
