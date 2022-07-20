@@ -22,7 +22,7 @@ warnings.filterwarnings("ignore")
 
 parser = argparse.ArgumentParser(description='')
 
-parser.add_argument("--train_path", default="~/test", type=str,
+parser.add_argument("--train_path", default="../test", type=str,
         help = 'training path to save results filing including source code, checkpoint, and tensorboard log')
 parser.add_argument("--arch", default='ResNet56', type=str,
         help = 'network architecture, currently only ResNet family is available')
@@ -97,12 +97,12 @@ if __name__ == '__main__':
             metrics = {'train/' + k: v for k, v in metrics.items()}
             
             logger.assign(metrics, num_data = batch['image'].shape[1])
-            
-            if state.step % args.do_log == 0:
+            step = int(state.step.mean().item())
+            if  step % args.do_log == 0:
                 train_time = time.time() - tic
                 
                 local_result = logger.result(metrics.keys())
-                print ('Global step {0:6d}: loss = {1:0.4f}, acc = {2:0.2f} ({3:1.3f} sec/step)'.format(state.step.item(), local_result['train/loss'], local_result['train/accuracy'], train_time/args.do_log))    
+                print ('Global step {0:6d}: loss = {1:0.4f}, acc = {2:0.2f} ({3:1.3f} sec/step)'.format(step, local_result['train/loss'], local_result['train/accuracy'], train_time/args.do_log))    
                 
                 tic = time.time()
         epoch += 1

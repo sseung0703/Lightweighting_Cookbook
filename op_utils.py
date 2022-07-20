@@ -180,9 +180,9 @@ def create_train_step(weight_decay):
 
         return new_state, metrics
 
-    train_step = jax.pmap(train_step, axis_name = "batch")
+    train_step = jax.pmap(train_step, axis_name = 'batch')
 
-    cross_replica_mean = jax.pmap(lambda x: jax.lax.pmean(x, 'x'), 'x')
+    cross_replica_mean = jax.pmap(lambda x: jax.lax.pmean(x, 'batch'), 'batch')
 
     def sync_batch_stats(state):
         return state.replace(batch_stats=cross_replica_mean(state.batch_stats))
